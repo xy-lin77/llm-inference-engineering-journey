@@ -10,7 +10,7 @@
 
 ---
 
-## 2. 随机采样进阶 (Sampling Parameters)
+## 2. 随机采样专题 (Sampling Parameters)
 
 ### 温度 (Temperature, T)
 * **机制**：通过缩放原始得分（Logits）改变概率分布的形状。
