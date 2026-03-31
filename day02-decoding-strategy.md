@@ -29,13 +29,13 @@
 | :--- | :--- | :--- | :--- |
 | **L1: 原子层** | **解码策略 (Decoding)** | 下一个词怎么选？ | Greedy, Beam Search, Top-p |
 | **L2: 路径层** | **提示策略 (Prompting)** | 单次推理如何引导？ | CoT (思维链), Few-shot |
-| **L3: 架构层** | **推理框架 (Reasoning)** | 多次推理如何组织？ | SC, ToT, ReAct, GoT |
+| **L3: 架构层** | **推理框架 (Reasoning)** | 多次推理如何组织？ | Self-Consistency, ToT, ReAct, GoT |
 
 ---
 
 ## 4. 架构层框架简介与适用场景
 
-### Self-Consistency (SC) - 自洽性
+### Self-Consistency - 自洽性
 * **简介**：并行采样多条路径，对最终答案进行“多数投票”。
 * **适用场景**：数学计算、符号逻辑、代码逻辑（有唯一标准答案）。
 
