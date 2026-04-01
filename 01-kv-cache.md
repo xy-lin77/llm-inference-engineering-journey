@@ -33,7 +33,7 @@ $$显存 \approx 2 \times L \times d \times n \times B \times \text{bytes}$$
 def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwargs):
     # 如果存在缓存，说明非首词生成阶段
     if past_key_values is not None:
-        # 【关键：裁剪】仅传入最后一个 token，形状变为 [batch, 1]
+        # 仅传入最后一个 token，形状变为 [batch, 1]
         input_ids = input_ids[:, -1:]
     
     return {"input_ids": input_ids, "past_key_values": past_key_values, "use_cache": True}
