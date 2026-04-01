@@ -7,7 +7,7 @@
 ## 2. 吞吐量（Throughput）
 - 公式：Throughput = 总生成token数 / 总耗时
 - 单位：TPS (Tokens Per Second)
-- 关键：Continuous Batching提升效率，可略增单请求延迟
+- 关键：Continuous Batching 提升效率，可略增单请求延迟
 
 ## 3. 显存占用
 - 模型参数：静态占用，FP16=参数量×2字节，INT4可大幅缩减
