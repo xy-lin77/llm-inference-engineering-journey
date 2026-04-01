@@ -41,16 +41,22 @@ def prepare_inputs_for_generation(self, input_ids, past_key_values=None, **kwarg
 
 ### 核心逻辑：Attention.forward 拼接
 ```python
-def forward(self, hidden_states, past_key_value=None, use_cache=False):
-    # 1. 计算当前 token 的 K, V
-    key_states, value_states = self.k_proj(hidden_states), self.v_proj(hidden_states)
+# 摘自 transformers 源码简化逻辑
+def forward(self, hidden_states, past_key_value=None, use_cache=False, ...):
+    # 1. 计算当前时刻的 K, V
+    query_states = self.q_proj(hidden_states)
+    key_states = self.k_proj(hidden_states)
+    value_states = self.v_proj(hidden_states)
 
-    # 2. 【关键：拼接】在序列维度 (seq_len) 拼接历史缓存
+    # 2. 获取历史缓存（如果存在）
     if past_key_value is not None:
-        key_states = torch.cat([past_key_value[0], key_states], dim=2)
-        value_states = torch.cat([past_key_value[1], value_states], dim=2)
+        # 为了支持更复杂的解码（如 PagedAttention），新版本 HuggingFace 引入了 DynamicCache 对象，它封装了拼接逻辑，不是直接cat
+        # 这里的 key_states 是当前 token 的，past_key_value 是历史所有 token 的
+        key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx)
 
-    # 3. 更新并传回接力棒
-    present_key_value = (key_states, value_states) if use_cache else None
-    return attn_output, present_key_value
+    # 3. 计算 Attention 时，使用了包含历史信息的完整 key_states/value_states
+    attn_weights = torch.matmul(query_states, key_states.transpose(-1, -2)) / math.sqrt(self.head_dim)
+    
+    # 4. 返回当前层更新后的 KV Cache 供下一轮推理使用
+    return attn_output, past_key_value if use_cache else None
 ```
