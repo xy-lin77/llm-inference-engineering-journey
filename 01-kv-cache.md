@@ -54,8 +54,9 @@ def forward(self, hidden_states, past_key_value=None, use_cache=False, ...):
         key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx)
         # 不直接torch.cat的原因：
         # a. 为了支持更复杂的解码（如 PagedAttention），HuggingFace 引入了 DynamicCache 对象，它封装了拼接逻辑
-        # b. 每一次cat都重新向显存申请连续空间并复制，开销大。
-        #    源码采用**预分配 (Pre-allocation)** 申请足够大的 Buffer，并使用 **原地更新 (In-place Update)** 如 key_states[:, :, prev_len:curr_len, :] = new_kv
+        # b. 每一次cat都重新向显存申请连续空间并复制，开销大。源码的做法：
+        #    采用预分配 (Pre-allocation) 申请足够大的 Buffer，
+        #    使用原地更新 (In-place Update) 如 key_states[:, :, prev_len:curr_len, :] = new_kv
 
 
     # 3. 计算 Attention 时，使用了包含历史信息的完整 key_states/value_states
