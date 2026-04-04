@@ -62,6 +62,9 @@ def load_model_and_tokenizer(model_name: str, precision: str):
         dtype=torch.float32,
         device_map="auto", # 来自 accelerate 包，自动分配 cpu/gpu，支持多卡
     )
+    
+    print("cuda device count:", torch.cuda.device_count())
+    print("hf_device_map:", model.hf_device_map)
 
     if precision == "half":
         if not torch.cuda.is_available():
