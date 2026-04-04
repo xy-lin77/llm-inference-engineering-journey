@@ -14,7 +14,7 @@ MODEL_MAP: Dict[str, str] = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compare FP32 / half / AMP inference for Qwen models."
+        description="Compare FP32 / BF16 / AMP inference for Qwen models."
     )
     parser.add_argument(
         "--model",
@@ -26,9 +26,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--precision",
         type=str,
-        choices=["fp32", "half", "amp"],
+        choices=["fp32", "bf16", "amp"],
         required=True,
-        help="Precision mode: fp32 / half / amp.",
+        help="Precision mode: fp32 / bf16 / amp.",
     )
     parser.add_argument(
         "--prompt",
@@ -56,20 +56,22 @@ def load_model_and_tokenizer(model_name: str, precision: str):
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
 
-    # 这里统一先按 FP32 加载，便于对比 half / amp
+    # 根据 precision 决定 dtype
+    if precision == "fp32":
+        dtype = torch.float32
+    elif precision in ["bf16", "amp"]:
+        dtype = torch.bfloat16
+    else:
+        raise ValueError("Unknown precision")
+
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        dtype=torch.float32,
-        device_map="auto", # 来自 accelerate 包，自动分配 cpu/gpu，支持多卡
+        dtype=dtype,
+        device_map="auto",  # 来自 accelerate 包，自动分配 cpu/gpu，支持多卡
     )
-    
+
     print("cuda device count:", torch.cuda.device_count())
     print("hf_device_map:", model.hf_device_map)
-
-    if precision == "half":
-        if not torch.cuda.is_available():
-            raise RuntimeError("half 模式通常需要 CUDA GPU；当前未检测到 CUDA。")
-        model.half()
 
     return tokenizer, model, model_id
 
@@ -104,7 +106,7 @@ def run_generation(model, inputs, precision: str, max_new_tokens: int):
         if precision == "amp":
             if not use_cuda:
                 raise RuntimeError("amp 模式需要 CUDA GPU；当前未检测到 CUDA。")
-            with torch.amp.autocast("cuda", dtype=torch.float16):
+            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 outputs = model.generate(**inputs, max_new_tokens=max_new_tokens)
         else:
             outputs = model.generate(**inputs, max_new_tokens=max_new_tokens)
