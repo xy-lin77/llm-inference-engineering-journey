@@ -1,4 +1,3 @@
-````md
 # Quick Start
 
 ## Qwen 7B
@@ -6,7 +5,7 @@
 ### FP32
 ```bash
 python infer_compare.py --model qwen7b --precision fp32
-````
+```
 
 ### 半精度（FP16）
 
