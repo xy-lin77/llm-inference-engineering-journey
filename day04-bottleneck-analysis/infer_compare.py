@@ -1,0 +1,153 @@
+import argparse
+import time
+from typing import Dict
+
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+
+MODEL_MAP: Dict[str, str] = {
+    "qwen7b": "Qwen/Qwen2.5-7B-Instruct",
+    "qwen72b": "Qwen/Qwen2.5-72B-Instruct",
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Compare FP32 / half / AMP inference for Qwen models."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["qwen7b", "qwen72b"],
+        required=True,
+        help="Which model to load.",
+    )
+    parser.add_argument(
+        "--precision",
+        type=str,
+        choices=["fp32", "half", "amp"],
+        required=True,
+        help="Precision mode: fp32 / half / amp.",
+    )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default="用一句话解释什么是 Transformer。",
+        help="User prompt.",
+    )
+    parser.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=64,
+        help="Maximum number of new tokens to generate.",
+    )
+    return parser.parse_args()
+
+
+def get_device_type() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
+
+
+def load_model_and_tokenizer(model_name: str, precision: str):
+    model_id = MODEL_MAP[model_name]
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+    # 这里统一先按 FP32 加载，便于对比 half / amp
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        dtype=torch.float32,
+        device_map="auto", # 来自 accelerate 包，自动分配 cpu/gpu，支持多卡
+    )
+
+    if precision == "half":
+        if not torch.cuda.is_available():
+            raise RuntimeError("half 模式通常需要 CUDA GPU；当前未检测到 CUDA。")
+        model.half()
+
+    return tokenizer, model, model_id
+
+
+def build_inputs(tokenizer, model, prompt: str):
+    messages = [{"role": "user", "content": prompt}]
+
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+
+    inputs = tokenizer(text, return_tensors="pt")
+
+    first_param_device = next(model.parameters()).device
+    inputs = {k: v.to(first_param_device) for k, v in inputs.items()}
+    return inputs
+
+
+def run_generation(model, inputs, precision: str, max_new_tokens: int):
+    use_cuda = torch.cuda.is_available()
+
+    if use_cuda:
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
+
+    start_time = time.time()
+
+    with torch.no_grad():
+        if precision == "amp":
+            if not use_cuda:
+                raise RuntimeError("amp 模式需要 CUDA GPU；当前未检测到 CUDA。")
+            with torch.amp.autocast("cuda", dtype=torch.float16):
+                outputs = model.generate(**inputs, max_new_tokens=max_new_tokens)
+        else:
+            outputs = model.generate(**inputs, max_new_tokens=max_new_tokens)
+
+    if use_cuda:
+        torch.cuda.synchronize()
+
+    end_time = time.time()
+
+    peak_memory_mb = None
+    if use_cuda:
+        peak_memory_mb = torch.cuda.max_memory_allocated() / 1024**2
+
+    return outputs, end_time - start_time, peak_memory_mb
+
+
+def main():
+    args = parse_args()
+
+    print(f"Loading model: {args.model} -> {MODEL_MAP[args.model]}")
+    print(f"Precision mode: {args.precision}")
+
+    tokenizer, model, model_id = load_model_and_tokenizer(args.model, args.precision)
+    inputs = build_inputs(tokenizer, model, args.prompt)
+
+    outputs, elapsed_time, peak_memory_mb = run_generation(
+        model=model,
+        inputs=inputs,
+        precision=args.precision,
+        max_new_tokens=args.max_new_tokens,
+    )
+
+    decoded_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    print("\n===== Result =====")
+    print(decoded_text)
+
+    print("\n===== Stats =====")
+    print(f"Model ID: {model_id}")
+    print(f"Precision: {args.precision}")
+    print(f"Time: {elapsed_time:.4f} s")
+    if peak_memory_mb is not None:
+        print(f"Peak GPU memory: {peak_memory_mb:.2f} MB")
+    else:
+        print("Peak GPU memory: N/A (CUDA not available)")
+
+
+if __name__ == "__main__":
+    main()
