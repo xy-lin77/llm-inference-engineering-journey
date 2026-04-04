@@ -1,0 +1,31 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# logs
+*.log
+
+# local secrets
+.env
+
+# model/cache
+cache/
+outputs/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
