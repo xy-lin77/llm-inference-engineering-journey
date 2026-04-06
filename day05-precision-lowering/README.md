@@ -66,4 +66,4 @@ python infer_compare.py --model qwen72b --precision amp
 |------|------|------|------|
 | FP32 | 1x | 1x | 基准 |
 | BF16 | ~0.5x | 1.2–1.8x | 理论无损 |
-| BF + AMP | ~0.5x | 在 BF16 上基础上 +10–30% | 理论无损 |
+| BF16 + AMP | ~0.5x | 在 BF16 上基础上 +10–30% | 理论无损 |
