@@ -105,7 +105,7 @@ def run_generation(model, inputs, precision: str, max_new_tokens: int):
     with torch.no_grad():
         if precision == "amp":
             if not use_cuda:
-                raise RuntimeError("amp 模式需要 CUDA GPU；当前未检测到 CUDA。")
+                raise RuntimeError("amp needs CUDA GPU, but CUDA not available")
             with torch.amp.autocast("cuda", dtype=torch.bfloat16):
                 outputs = model.generate(**inputs, max_new_tokens=max_new_tokens)
         else:
