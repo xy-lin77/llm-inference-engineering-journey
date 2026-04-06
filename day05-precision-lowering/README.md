@@ -59,3 +59,4 @@ python infer_compare.py --model qwen72b --precision amp
 - **`torch.amp.autocast()`（AMP）**：在运行时按算子自动选择 **BF16** 或 **FP32**，实现性能与数值稳定性的平衡；QKV、FFN 矩阵乘法使用 BF16，LayerNorm、Softmax、RoPE 等数值敏感算子保留 FP32。
 
 - **注**：AMP 只优化计算精度而不降低模型权重显存占用，因此大模型推理必须先用 **BF16** 加载权重，再配合 AMP 才能同时避免 OOM 并获得性能与稳定性的平衡。
+
