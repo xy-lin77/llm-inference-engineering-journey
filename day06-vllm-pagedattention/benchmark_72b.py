@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from vllm import LLM, SamplingParams
 
 # --- 1. 配置 ---
-MODEL_ID = "Qwen/Qwen2-7B-Instruct"
+MODEL_ID = "Qwen/Qwen2-72B-Instruct"  
 DTYPE = torch.bfloat16
 
 # 用于测试的对话式 Prompts
@@ -29,10 +29,11 @@ model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
     torch_dtype=DTYPE,
     device_map="auto",
+    # 72B 模型建议加上，提高加载稳定性
+    trust_remote_code=True
 )
 
 # 将对话格式的 prompts 转换为模型可以理解的单个字符串
-# 这是进行批处理的标准做法
 formatted_prompts = [
     tokenizer.apply_chat_template(p, tokenize=False, add_generation_prompt=True)
     for p in PROMPTS_AS_MESSAGES
@@ -76,8 +77,8 @@ print("--- (2/3) 开始 vLLM 推理测试 ---")
 llm = LLM(
     model=MODEL_ID,
     dtype=DTYPE,
-    # 如果你有多个 GPU，可以设置 tensor_parallel_size=N
-    # tensor_parallel_size=1,
+    tensor_parallel_size=2,  # 2张 H800 并行加载 72B
+    trust_remote_code=True,
 )
 
 # 定义采样参数
@@ -85,7 +86,6 @@ sampling_params = SamplingParams(temperature=0.7, top_p=0.95, max_tokens=MAX_TOK
 
 print("vLLM 开始生成...")
 start_time_vllm = time.time()
-# vLLM 直接接收格式化后的字符串列表进行高效批处理
 outputs_vllm = llm.generate(formatted_prompts, sampling_params)
 end_time_vllm = time.time()
 print("vLLM 生成完成。")
