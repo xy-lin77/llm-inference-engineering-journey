@@ -1,45 +1,102 @@
 import time
 import torch
-from vllm import LLM, SamplingParams
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from vllm import LLM, SamplingParams
 
 # --- 1. 配置 ---
-# 注意：Qwen-72B 模型非常大（约 144GB），首次下载会非常耗时！
-MODEL_ID = "Qwen/Qwen-72B-Chat"
-DTYPE = "bfloat16"  # H800/A100 等现代 GPU 的最佳选择
+# 使用 Qwen2-7B-Instruct，这是一个性能很好的新模型
+MODEL_ID = "Qwen/Qwen2-7B-Instruct"
+# 对于现代 GPU (如 A100/H100/RTX 30xx/40xx)，bfloat16 是最佳选择
+DTYPE = torch.bfloat16
 
-PROMPTS = [
-    "你好，请介绍一下你自己。",
-    "写一个关于一只勇敢的小猫去外太空探险的童话故事。",
-    "请解释一下什么是人工智能，并列举三个实际应用案例。",
-    "Translate the following English sentence to French: 'The quick brown fox jumps over the lazy dog.'",
-    "编写一个 Python 函数，用于计算斐波那契数列的第 n 项。",
-    "宇宙的起源是什么？",
-    "给我讲个笑话吧。",
-    "介绍一下 vLLM 的 PagedAttention 机制是如何工作的，它解决了什么问题？",
+# 准备一批用于测试的对话式 Prompts
+PROMPTS_AS_MESSAGES = [
+    [{"role": "user", "content": "你好，请介绍一下你自己。"}],
+    [{"role": "user", "content": "写一个关于一只勇敢的小猫去外太空探险的童话故事。"}],
+    [{"role": "user", "content": "请解释一下什么是人工智能，并列举三个实际应用案例。"}],
+    [{"role": "user", "content": "Translate the following English sentence to French: 'The quick brown fox jumps over the lazy dog.'"}],
+    [{"role": "user", "content": "编写一个 Python 函数，用于计算斐波那契数列的第 n 项。"}],
+    [{"role": "user", "content": "宇宙的起源是什么？"}],
+    [{"role": "user", "content": "给我讲个笑话吧。"}],
+    [{"role": "user", "content": "介绍一下 vLLM 的 PagedAttention 机制是如何工作的，它解决了什么问题？"}],
 ]
 MAX_TOKENS = 256
 
-# --- 2. vLLM 推理测试 (使用 2 张 GPU) ---
-print("--- 开始 vLLM 推理测试 (2x H800) ---")
+# --- 2. Transformers 推理测试 ---
+print("--- (1/3) 开始 Transformers 推理测试 ---")
 
-# 加载 vLLM 模型，使用张量并行
-# tensor_parallel_size=2 表示将模型切分到 2 张 GPU 上
-llm = LLM(
-    model=MODEL_ID,
-    tensor_parallel_size=2,
+# 加载 Tokenizer 和模型
+# 注意: trust_remote_code=True 对于 Qwen 系列是必需的，因为它需要加载模型仓库中的自定义 Python 代码。
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_ID,
+    torch_dtype=DTYPE,
+    device_map="auto",
     trust_remote_code=True,
-    dtype=DTYPE
 )
 
-sampling_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=MAX_TOKENS)
+# 将对话格式的 prompts 转换为模型可以理解的单个字符串
+# 这是进行批处理的标准做法
+formatted_prompts = [
+    tokenizer.apply_chat_template(p, tokenize=False, add_generation_prompt=True)
+    for p in PROMPTS_AS_MESSAGES
+]
+
+print("Transformers 开始生成...")
+start_time_hf = time.time()
+
+# 对所有格式化后的 prompts 进行批处理
+inputs = tokenizer(formatted_prompts, return_tensors="pt", padding=True)
+inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+with torch.no_grad():
+    outputs_hf_tokens = model.generate(**inputs, max_new_tokens=MAX_TOKENS)
+
+end_time_hf = time.time()
+print("Transformers 生成完成。")
+
+# 计算并打印 Transformers 性能
+duration_hf = end_time_hf - start_time_hf
+total_tokens_hf = sum(len(output) - len(prompt_input) for output, prompt_input in zip(outputs_hf_tokens, inputs.input_ids))
+throughput_hf = total_tokens_hf / duration_hf
+
+print(f"\n[Transformers 结果]")
+print(f"总耗时: {duration_hf:.2f} 秒")
+print(f"总生成 Token 数: {total_tokens_hf}")
+print(f"吞吐量 (Tokens/秒): {throughput_hf:.2f}")
+
+# 释放 Transformers 模型占用的显存
+del model
+del inputs
+del outputs_hf_tokens
+torch.cuda.empty_cache()
+print("\n--- Transformers 测试结束，已释放显存 ---\n")
+
+
+# --- 3. vLLM 推理测试 ---
+print("--- (2/3) 开始 vLLM 推理测试 ---")
+
+# 加载 vLLM 模型
+# vLLM 同样需要 trust_remote_code=True 来加载 Qwen 的自定义代码
+llm = LLM(
+    model=MODEL_ID,
+    trust_remote_code=True,
+    dtype=DTYPE,
+    # 如果你有多个 GPU，可以设置 tensor_parallel_size=N
+    # tensor_parallel_size=1,
+)
+
+# 定义采样参数
+sampling_params = SamplingParams(temperature=0.7, top_p=0.95, max_tokens=MAX_TOKENS)
 
 print("vLLM 开始生成...")
 start_time_vllm = time.time()
-outputs_vllm = llm.generate(PROMPTS, sampling_params)
+# vLLM 直接接收格式化后的字符串列表进行高效批处理
+outputs_vllm = llm.generate(formatted_prompts, sampling_params)
 end_time_vllm = time.time()
 print("vLLM 生成完成。")
 
+# 计算并打印 vLLM 性能
 duration_vllm = end_time_vllm - start_time_vllm
 total_tokens_vllm = sum(len(output.outputs[0].token_ids) for output in outputs_vllm)
 throughput_vllm = total_tokens_vllm / duration_vllm
@@ -54,53 +111,10 @@ torch.cuda.empty_cache()
 print("\n--- vLLM 测试结束，已释放显存 ---\n")
 
 
-# --- 3. Transformers 推理测试 (使用 2 张 GPU) ---
-print("--- 开始 Transformers 推理测试 (2x H800) ---")
-
-# 加载 Transformers 模型和 Tokenizer
-# device_map="auto" 会让 accelerate 自动将模型切分到所有可用 GPU
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_ID,
-    torch_dtype=DTYPE,
-    device_map="auto",
-    trust_remote_code=True
-)
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-
-print("Transformers 开始生成...")
-start_time_hf = time.time()
-
-inputs = tokenizer(PROMPTS, return_tensors="pt", padding=True).to("cuda")
-# 注意：这里可能会因为 padding 后的总 token 数过多而导致 OOM
-try:
-    outputs_hf_tokens = model.generate(**inputs, max_new_tokens=MAX_TOKENS)
-    end_time_hf = time.time()
-    print("Transformers 生成完成。")
-
-    duration_hf = end_time_hf - start_time_hf
-    total_tokens_hf = sum(len(output) - len(prompt_input) for output, prompt_input in zip(outputs_hf_tokens, inputs.input_ids))
-    throughput_hf = total_tokens_hf / duration_hf
-
-    print(f"\n[Transformers 结果]")
-    print(f"总耗时: {duration_hf:.2f} 秒")
-    print(f"总生成 Token 数: {total_tokens_hf}")
-    print(f"吞吐量 (Tokens/秒): {throughput_hf:.2f}")
-
-except Exception as e:
-    print(f"\n[Transformers 结果]")
-    print(f"Transformers 推理失败! 错误: {e}")
-    print("这很可能是因为预分配和 padding 导致了显存不足 (OOM)。")
-    throughput_hf = 0
-
 # --- 4. 最终对比 ---
-print("\n--- 最终性能对比 ---")
+print("--- (3/3) 最终性能对比 ---")
+print(f"Hugging Face Transformers 吞吐量: {throughput_hf:.2f} Tokens/秒")
 print(f"vLLM 吞吐量: {throughput_vllm:.2f} Tokens/秒")
 if throughput_hf > 0:
-    print(f"Transformers 吞吐量: {throughput_hf:.2f} Tokens/秒")
     speedup = throughput_vllm / throughput_hf
-    print(f"\n结论: vLLM 速度是 Transformers 的 {speedup:.2f} 倍。")
-else:
-    print("Transformers 未能成功运行。")
-    print("\n结论: 在此场景下，vLLM 能够稳定运行，而标准 Transformers 因内存问题失败，展示了其在处理大模型时的巨大优势。")
+    print(f"\n结论: 在此批处理测试中，vLLM 的速度是 Transformers 的 {speedup:.2f} 倍。")
