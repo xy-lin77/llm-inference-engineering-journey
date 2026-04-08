@@ -29,7 +29,6 @@ model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
     torch_dtype=DTYPE,
     device_map="auto",
-    trust_remote_code=True,
 )
 
 # 将对话格式的 prompts 转换为模型可以理解的单个字符串
