@@ -10,7 +10,7 @@ model = AutoModelForCausalLM.from_pretrained(
     model_id,
     dtype=torch.float32,
     device_map="auto",
-    trust_remote_code=True  # 已统一加上
+    trust_remote_code=True
 )
 
 messages = [
