@@ -41,7 +41,7 @@ PagedAttention 通过一个中央的块管理器 (Block Manager) 来实现动态
 | **内存共享** | 困难 (需完整复制) | **高效** (共享块表指针) |
 | **系统吞吐量** | 低 | **极高 (2-4x 提升)** |
 
-### ✨ 杀手锏：高效内存共享
+### 核心特性：高效内存共享
 
 这是 PagedAttention 最强大的特性，尤其适用于并行采样 (Parallel Sampling) 和束搜索 (Beam Search)。
 
