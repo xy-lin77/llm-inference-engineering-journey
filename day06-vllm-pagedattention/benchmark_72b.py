@@ -24,8 +24,7 @@ MAX_TOKENS = 256
 print("--- (1/3) 开始 Transformers 推理测试 ---")
 
 # 加载 Tokenizer 和模型
-# 注意: trust_remote_code=True 对于 Qwen 系列是必需的，因为它需要加载模型仓库中的自定义 Python 代码。
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_ID,
     torch_dtype=DTYPE,
