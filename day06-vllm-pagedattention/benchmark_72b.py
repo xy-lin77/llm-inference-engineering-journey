@@ -73,10 +73,8 @@ print("\n--- Transformers 测试结束，已释放显存 ---\n")
 print("--- (2/3) 开始 vLLM 推理测试 ---")
 
 # 加载 vLLM 模型
-# vLLM 同样需要 trust_remote_code=True 来加载 Qwen 的自定义代码
 llm = LLM(
     model=MODEL_ID,
-    trust_remote_code=True,
     dtype=DTYPE,
     # 如果你有多个 GPU，可以设置 tensor_parallel_size=N
     # tensor_parallel_size=1,
