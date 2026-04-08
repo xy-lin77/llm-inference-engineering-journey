@@ -1,4 +1,4 @@
-# vLLM PagedAttention 核心原理笔记
+# vLLM PagedAttention
 
 ## 1. 为什么需要？(传统 KV Cache 的痛点)
 
