@@ -4,12 +4,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from vllm import LLM, SamplingParams
 
 # --- 1. 配置 ---
-# 使用 Qwen2-7B-Instruct，这是一个性能很好的新模型
 MODEL_ID = "Qwen/Qwen2-7B-Instruct"
-# 对于现代 GPU (如 A100/H100/RTX 30xx/40xx)，bfloat16 是最佳选择
 DTYPE = torch.bfloat16
 
-# 准备一批用于测试的对话式 Prompts
+# 用于测试的对话式 Prompts
 PROMPTS_AS_MESSAGES = [
     [{"role": "user", "content": "你好，请介绍一下你自己。"}],
     [{"role": "user", "content": "写一个关于一只勇敢的小猫去外太空探险的童话故事。"}],
