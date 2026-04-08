@@ -3,12 +3,10 @@ import time
 from typing import Dict
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-
 MODEL_MAP: Dict[str, str] = {
     "qwen7b": "Qwen/Qwen2.5-7B-Instruct",
     "qwen72b": "Qwen/Qwen2.5-72B-Instruct",
 }
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Compare FP32 / BF16 / AMP inference for Qwen models."
@@ -40,15 +38,14 @@ def parse_args() -> argparse.Namespace:
         help="Maximum number of new tokens to generate.",
     )
     return parser.parse_args()
-
 def get_device_type() -> str:
     if torch.cuda.is_available():
         return "cuda"
     return "cpu"
-
 def load_model_and_tokenizer(model_name: str, precision: str):
     model_id = MODEL_MAP[model_name]
     tokenizer = AutoTokenizer.from_pretrained(model_id)
+    # 根据 precision 决定 dtype
     if precision == "fp32":
         dtype = torch.float32
     elif precision in ["bf16", "amp"]:
@@ -58,13 +55,12 @@ def load_model_and_tokenizer(model_name: str, precision: str):
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         dtype=dtype,
-        device_map="auto",
-        trust_remote_code=True
+        device_map="auto",  # 来自 accelerate 包，自动分配 cpu/gpu，支持多卡
+        trust_remote_code=True, 
     )
     print("cuda device count:", torch.cuda.device_count())
     print("hf_device_map:", model.hf_device_map)
     return tokenizer, model, model_id
-
 def build_inputs(tokenizer, model, prompt: str):
     messages = [{"role": "user", "content": prompt}]
     text = tokenizer.apply_chat_template(
@@ -76,7 +72,6 @@ def build_inputs(tokenizer, model, prompt: str):
     first_param_device = next(model.parameters()).device
     inputs = {k: v.to(first_param_device) for k, v in inputs.items()}
     return inputs
-
 def run_generation(model, inputs, precision: str, max_new_tokens: int):
     use_cuda = torch.cuda.is_available()
     if use_cuda:
@@ -99,7 +94,6 @@ def run_generation(model, inputs, precision: str, max_new_tokens: int):
     if use_cuda:
         peak_memory_mb = torch.cuda.max_memory_allocated() / 1024**2
     return outputs, end_time - start_time, peak_memory_mb
-
 def main():
     args = parse_args()
     print(f"Loading model: {args.model} -> {MODEL_MAP[args.model]}")
@@ -123,6 +117,6 @@ def main():
         print(f"Peak GPU memory: {peak_memory_mb:.2f} MB")
     else:
         print("Peak GPU memory: N/A (CUDA not available)")
-
-if __name__ == "__main__":
+if **name** == "__main__":
     main()
+也加上trust remote，加代码就行了，别改其他的，别加注释
