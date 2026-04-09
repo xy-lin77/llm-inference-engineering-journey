@@ -56,7 +56,7 @@ python infer_compare.py --model qwen72b --precision amp
 
 - **`device_map="auto"`（accelerate）**：自动根据 GPU/CPU 内存情况将模型按层切分并分配到不同设备上，实现大模型的多卡与异构设备部署。
 
-- **`model.to(torch.bfloat16)`（BF16）**：将模型权重转换为 bfloat16，显著降低显存占用并提升吞吐，同时相比 FP16 具有更好的数值稳定性（更大指数范围）。
+- **`model.to(torch.bfloat16)`（BF16）**：将模型权重转换为 bfloat16，显著降低显存占用并提升吞吐。与 FP16 做比较，BF16：1. 具备更好的数值稳定性（更大指数范围），2. 具备更小的精度，不易出现梯度消失或爆炸。在“不出错”比“算得精”更重要的训练场景下，BF16 更好。
 
 - **`torch.amp.autocast()`（AMP）**：在运行时按算子自动选择 **BF16** 或 **FP32**，实现性能与数值稳定性的平衡；QKV、FFN 矩阵乘法使用 BF16，LayerNorm、Softmax、RoPE 等数值敏感算子保留 FP32。
 
