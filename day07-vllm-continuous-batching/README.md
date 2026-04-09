@@ -1,4 +1,4 @@
-# vLLM 连续批处理 (Continuous Batching) 核心笔记
+# vLLM 连续批处理 (Continuous Batching) 
 
 ## 核心思想
 
