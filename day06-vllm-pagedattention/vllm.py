@@ -34,6 +34,7 @@ sampling_params = SamplingParams(
     max_tokens=256
 )
 
+# 一次性把 8 个请求全部加入调度队列，高吞吐批量并发
 outputs_vllm = llm.generate(formatted_prompts, sampling_params)
 
 for i, output in enumerate(outputs_vllm):
