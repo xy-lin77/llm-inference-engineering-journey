@@ -1,4 +1,3 @@
-import time
 import torch
 from vllm import LLM, SamplingParams
 
@@ -16,9 +15,29 @@ PROMPTS_AS_MESSAGES = [
 llm = LLM(
     model="Qwen/Qwen2-72B-Instruct",
     dtype=torch.bfloat16,
-    tensor_parallel_size=2,  # 2张 H800 并行加载 72B
+    tensor_parallel_size=2,  # 2张 H800 并行
     trust_remote_code=True,
 )
 
-sampling_params = SamplingParams(temperature=0.7, top_p=0.95, max_tokens=256)
+formatted_prompts = [
+    llm.llm_engine.tokenizer.apply_chat_template( 
+        msg,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+    for msg in PROMPTS_AS_MESSAGES
+]
+
+sampling_params = SamplingParams(
+    temperature=0.7,
+    top_p=0.95,
+    max_tokens=256
+)
+
 outputs_vllm = llm.generate(formatted_prompts, sampling_params)
+
+for i, output in enumerate(outputs_vllm):
+    print(f"\n========== 问题 {i+1} ==========")
+    print(f"用户：{PROMPTS_AS_MESSAGES[i][0]['content']}")
+    print(f"助手：{output.outputs[0].text.strip()}")
+    
