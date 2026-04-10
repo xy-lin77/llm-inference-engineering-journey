@@ -1,6 +1,21 @@
 # Quick Start
 
+## 说明
 
+- `vllm.py`：基于 vLLM 的最小推理实现脚本，当中有 vLLM Tokenizer 的使用示例。
+- `transformers-vs-vllm.py`：统一使用 HF Transformers Tokenizer，对比 HF Transformers 与 vLLM 的推理性能差异。
+
+---
+
+### vLLM
+```bash
+python vllm.py
+```
+
+### 对比实验
+```bash
+python transformers-vs-vllm.py
+```
 
 ---
 
