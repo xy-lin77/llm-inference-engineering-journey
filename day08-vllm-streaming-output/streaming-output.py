@@ -21,11 +21,18 @@ llm = LLM(
 
 formatted_prompts = [
     llm.llm_engine.tokenizer.apply_chat_template(
-        msg, tokenize=False, add_generation_prompt=True
-    ) for msg in PROMPTS_AS_MESSAGES
+        msg, 
+        tokenize=False, 
+        add_generation_prompt=True
+    ) 
+    for msg in PROMPTS_AS_MESSAGES
 ]
 
-sampling_params = SamplingParams(temperature=0.7, top_p=0.95, max_tokens=256)
+sampling_params = SamplingParams(
+    temperature=0.7, 
+    top_p=0.95,
+    max_tokens=256
+)
 
 # 一次性传入所有 prompt，并发生成，流式返回
 results = {}  # 存储每个请求的上一轮文本，用于计算增量
