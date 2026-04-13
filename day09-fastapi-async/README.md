@@ -40,6 +40,8 @@ async def create_item(item: Item):  # 自动校验所有字段
     return {"data": item.dict()}
 ```
 
+---
+
 ## 4. 启动与文档
 - 启动：`uvicorn main:app --reload --host 0.0.0.0 --port 8000`
 - 交互式文档：http://127.0.0.1:8000/docs
