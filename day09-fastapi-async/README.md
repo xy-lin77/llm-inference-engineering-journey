@@ -1,4 +1,4 @@
-# FastAPI 异步接口开发笔记（核心）
+# FastAPI 异步接口开发
 ## 1. 依赖安装
 ```bash
 pip install fastapi uvicorn pydantic
