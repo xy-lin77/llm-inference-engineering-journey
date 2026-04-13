@@ -1,8 +1,47 @@
 # FastAPI 异步接口开发
-## 1. 依赖安装
+
+# 1. Quick Start
+
+## 依赖安装
 ```bash
 pip install fastapi uvicorn pydantic
 ```
+
+## 目录结构
+```
+/day09-fastapi-async/
+├── app_example/
+│   └── main.py
+└── app_inference/
+    └── main.py
+```
+
+## 启动前提
+1. 终端进入 **/day09-fastapi-async/** 根目录
+   ```bash
+   cd /day09-fastapi-async
+   ```
+2. 安装依赖
+   ```bash
+   pip install fastapi uvicorn vllm pydantic
+   ```
+
+## 分别启动两个独立服务
+### 1. 启动示例服务（app_example）
+端口：8000
+```bash
+uvicorn app_example.main:app --host 0.0.0.0 --port 8000
+```
+
+### 2. 启动推理服务（app_inference）
+**新开一个终端**，端口：8001
+```bash
+uvicorn app_inference.main:app --host 0.0.0.0 --port 8001
+```
+
+## 访问服务
+- 示例服务文档：http://localhost:8000/docs
+- 推理服务文档：http://localhost:8001/docs
 
 ---
 
@@ -38,9 +77,3 @@ class Item(BaseModel):
 async def create_item(item: Item):  # 自动校验所有字段
     return {"data": item.dict()}
 ```
-
----
-
-## 4. 启动与文档
-- 启动：`uvicorn main:app --reload --host 0.0.0.0 --port 8000`
-- 交互式文档：http://127.0.0.1:8000/docs
