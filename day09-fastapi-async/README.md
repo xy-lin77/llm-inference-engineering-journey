@@ -7,9 +7,8 @@ pip install fastapi uvicorn pydantic
 ---
 
 ## 2. 异步接口（async def）
-- 用 `async def` 定义，处理IO操作需加 `await`
-- 高并发、高性能，禁止在里面跑耗时的纯计算
-- 纯计算/同步操作可用普通 `def`，FastAPI 会自动把它放到线程池执行，不阻塞主事件循环
+- 用 `async def` 定义，处理IO操作需加 `await`。高并发、高性能，禁止在里面跑耗时的纯计算。
+- 纯计算/同步操作可用普通 `def`，FastAPI 会自动把它放到线程池执行，不阻塞主事件循环。
 
 ---
 
