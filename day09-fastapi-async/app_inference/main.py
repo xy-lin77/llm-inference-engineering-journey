@@ -1,5 +1,6 @@
-from fastapi import FastAPI, StreamingResponse
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, StreamingResponse, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 from vllm import LLM, SamplingParams
 import asyncio
 
@@ -7,7 +8,7 @@ import asyncio
 app = FastAPI(title="Qwen2-72B-Instruct 推理服务")
 
 # --------------------------
-# Qwen-72B 生产级模型配置（核心）
+# Qwen-72B 生产级模型配置
 # --------------------------
 llm = LLM(
     model="Qwen/Qwen2-72B-Instruct",
@@ -32,44 +33,85 @@ class InferenceRequest(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="随机性")
     top_p: float = Field(default=0.9, ge=0.0, le=1.0, description="采样阈值")
 
+    # ==================== 新增校验 ====================
+    @field_validator('prompt')
+    def check_prompt(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError("prompt 不能为空")
+        if len(v) > 8192:
+            raise ValueError(f"prompt 长度超限，当前长度：{len(v)}，最大允许：8192")
+        return v
+
+    @field_validator('max_tokens')
+    def check_max_tokens(cls, v):
+        if v <= 0:
+            raise ValueError("max_tokens 必须大于 0")
+        if v > 8192:
+            raise ValueError("max_tokens 最大不能超过 8192")
+        return v
+
+    @field_validator('temperature')
+    def check_temperature(cls, v):
+        if not (0.0 <= v <= 1.0):
+            raise ValueError("temperature 必须在 0.0 ~ 1.0 之间")
+        return v
+
+    @field_validator('top_p')
+    def check_top_p(cls, v):
+        if not (0.0 <= v <= 1.0):
+            raise ValueError("top_p 必须在 0.0 ~ 1.0 之间")
+        return v
+
 # --------------------------
 # 1. 非流式接口 /generate
 # --------------------------
 @app.post("/generate")
 async def generate(req: InferenceRequest):
-    sampling_params = SamplingParams(
-        max_tokens=req.max_tokens,
-        temperature=req.temperature,
-        top_p=req.top_p,
-        stop_token_ids=[151643],  # Qwen 专属 EOS token
-        skip_special_tokens=True,
-    )
-    # vLLM 同步生成，FastAPI 自动线程池调度
-    outputs = llm.generate(req.prompt, sampling_params)
-    response = outputs[0].outputs[0].text
-    return {
-        "prompt": req.prompt,
-        "response": response,
-        "finish_reason": outputs[0].outputs[0].finish_reason
-    }
+    try:
+        sampling_params = SamplingParams(
+            max_tokens=req.max_tokens,
+            temperature=req.temperature,
+            top_p=req.top_p,
+            stop_token_ids=[151643],  # Qwen 专属 EOS token
+            skip_special_tokens=True,
+        )
+        # vLLM 同步生成，FastAPI 自动线程池调度
+        outputs = llm.generate(req.prompt, sampling_params)
+        response = outputs[0].outputs[0].text
+        return {
+            "success": True,
+            "prompt": req.prompt,
+            "response": response,
+            "finish_reason": outputs[0].outputs[0].finish_reason
+        }
+    except Exception as e:
+        return JSONResponse(status_code=400, content={
+            "success": False,
+            "error": str(e)
+        })
 
 # --------------------------
 # 2. 流式接口 /stream（SSE 标准）
 # --------------------------
 async def stream_generator(req: InferenceRequest):
-    sampling_params = SamplingParams(
-        max_tokens=req.max_tokens,
-        temperature=req.temperature,
-        top_p=req.top_p,
-        stop_token_ids=[151643],
-        skip_special_tokens=True,
-        stream=True,
-    )
-    generator = llm.generate_stream(req.prompt, sampling_params)
-    for output in generator:
-        if output.outputs[0].text:
-            yield f"data: {output.outputs[0].text}\n\n"
-        await asyncio.sleep(0)  # 让出事件循环，避免阻塞
+    try:
+        sampling_params = SamplingParams(
+            max_tokens=req.max_tokens,
+            temperature=req.temperature,
+            top_p=req.top_p,
+            stop_token_ids=[151643],
+            skip_special_tokens=True,
+            stream=True,
+        )
+        generator = llm.generate_stream(req.prompt, sampling_params)
+        for output in generator:
+            if output.outputs[0].text:
+                yield f"data: {output.outputs[0].text}\n\n"
+            await asyncio.sleep(0)  # 让出事件循环，避免阻塞
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        yield f"data: [ERROR] {str(e)}\n\n"
 
 @app.post("/stream")
 async def stream(req: InferenceRequest):
