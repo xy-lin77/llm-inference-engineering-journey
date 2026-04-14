@@ -13,9 +13,9 @@ pip install fastapi uvicorn pydantic
 ├── app_example/
 │   └── main.py # 学习FastAPI
 └── app_inference_basic/
-│   └── main.py # 学习FastAPI封装vLLM推理服务（最小可执行脚本）
+│   └── main.py # （极简版）vLLM封装
 └── app_inference_advanced/
-    └── main.py # 生产级启动配置 + 异常处理 + 处理超长 prompt、参数非法等情况，返回结构化响应
+    └── main.py # （生产版）校验+异常+结构化返回
 ```
 
 ### 1.3 启动前提
@@ -28,20 +28,26 @@ pip install fastapi uvicorn pydantic
    pip install fastapi uvicorn vllm pydantic
    ```
 
-### 1.4 分别启动两个独立服务
+### 1.4 分别启动三个独立服务
 1. 启动示例服务（app_example）
 端口：8000
 ```bash
 uvicorn app_example.main:app --host 0.0.0.0 --port 8000
 ```
 
-2. 启动推理服务（app_inference）
+2. 启动基础推理服务（app_inference_basic）
 **新开一个终端**，端口：8001
 ```bash
-uvicorn app_inference.main:app --host 0.0.0.0 --port 8001
+uvicorn app_inference_basic.main:app --host 0.0.0.0 --port 8001
 ```
 
-3. 访问服务
+3. 启动基础推理服务（app_inference_advanced）
+**新开一个终端**，端口：8002
+```bash
+uvicorn app_inference_advanced.main:app --host 0.0.0.0 --port 8002
+```
+
+4. 访问服务
 - 示例服务文档：http://localhost:8000/docs
 - 推理服务文档：http://localhost:8001/docs
 
