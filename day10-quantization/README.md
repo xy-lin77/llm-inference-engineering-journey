@@ -33,6 +33,70 @@
 
 ---
 
+很好的问题。核心数学原理其实是标量可以从矩阵乘法中提出来（双线性性），而不完全是结合律。让我们推导一遍。           
+                                                            
+  ---                                                                                                                
+  量化的数学定义                                                                                                     
+                                                                                                                     
+  以对称量化（zero_point = 0）为例：                        
+
+  $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
+
+  其中 $s_x$ 是 scale（标量），$x_q$ 是整数张量，误差来自 round。
+
+  ---
+  核心推导
+
+  设线性变换为 $y = W \cdot x$，量化后：
+
+  $$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                         
+  
+  代入：                                                                                                             
+                                                            
+  $$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q)$$
+
+  由于 $s_w, s_x$ 是标量，可以从矩阵乘法中提出：                                                                     
+  
+  $$= s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
+                                                            
+  这就是「先做整数矩阵乘法，再乘回 scale」，即反量化。                                                               
+                                                            
+  ---
+  为什么标量可以提出来？
+
+  对矩阵乘法来说：$(c \cdot A)(d \cdot B) = cd \cdot
+  (AB)$，这是标量乘法与矩阵乘法的相容性（bilinearity），本质上是分配律：
+
+  $$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
+
+  ---
+  误差来自哪里？
+
+  精确展开后：
+
+  $$W = s_w \cdot W_q + \varepsilon_w, \quad x = s_x \cdot x_q + \varepsilon_x$$
+
+  $$W \cdot x = s_w s_x (W_q x_q) + \underbrace{s_w W_q \varepsilon_x + \varepsilon_w s_x x_q + \varepsilon_w
+  \varepsilon_x}_{\text{量化误差项}}$$
+
+  量化精度越高（bit 越多），$\varepsilon$ 越小，近似越准。                                                           
+  
+  ---                                                                                                                
+  总结                                                      
+
+  ┌──────────────────────────────┬──────────────┐
+  │           你的猜想           │   实际情况   │
+  ├──────────────────────────────┼──────────────┤
+  │ 结合律 $(AB)C = A(BC)$       │ 不是主要原因 │
+  ├──────────────────────────────┼──────────────┤
+  │ 双线性性 $(cA)(dB) = cd(AB)$ │ ✅ 核心原理  │
+  └──────────────────────────────┴──────────────┘                                                                    
+  
+  所以流程成立的原因是：scale 是标量，标量可以从矩阵乘法里提出来合并，round 的误差足够小时近似成立。
+
+
+---
+
 ## 3. 量化误差来源
 1. 舍入误差：浮点连续值→整数离散值的固有偏差。
 2. 截断/饱和误差：浮点极值超出整数范围，离群值是精度暴跌主因。
