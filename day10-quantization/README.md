@@ -24,24 +24,22 @@
 | 对称量化（常用于权重） | zero_point = 0，适用于权重等分布相对对称的场景 |
 | 非对称量化（常用于激活） | 需要 zero_point，适用于激活等分布不以0为中心的场景 |
 
+以对称量化（zero_point = 0）为例：                        
+
+$$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
+
+其中 $s_x$ 是 scale（标量），$x_q$ 是整数张量，误差来自 round。
+
 ### 2. 权重量化
 
 | 模型环节 | 量化方式及细节 |
 |----------|----------------|
 | 词嵌入层 | 仅量化存储，使用时反量化回浮点；使用方式为查表（index lookup）而非GEMM，反量化仅需对取出的行乘以scale，代价极低，属于纯存储压缩 |
-| Q, K, V, O 投影层、FFN 线性层 | 占模型参数的绝大部分，是量化的核心目标；常用量化<br>- per-tensor：整个矩阵共享一个scale，精度最差<br>- per-channel（per-row）：每行一个scale，精度较好，是主流<br>- group-wise/per-block：每g个元素（如g=128）共享一个scale，精度接近FP16，GPTQ/AWQ默认采用此方式 |
+| Q, K, V, O 投影层、<br>FFN 线性层 | 占模型参数的绝大部分，是量化的核心目标；常用量化<br>- per-tensor：整个矩阵共享一个scale，精度最差<br>- per-channel（per-row）：每行一个scale，精度较好，是主流<br>- group-wise/per-block：每g个元素（如g=128）共享一个scale，精度接近FP16，GPTQ/AWQ默认采用此方式 |
 
 ---
 
-很好的问题。核心数学原理其实是标量可以从矩阵乘法中提出来（双线性性），而不完全是结合律。让我们推导一遍。           
-                                                                                                                                                                            
-  量化的数学定义                                                                                                     
-                                                                                                                     
-  以对称量化（zero_point = 0）为例：                        
 
-  $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
-
-  其中 $s_x$ 是 scale（标量），$x_q$ 是整数张量，误差来自 round。
 
   ---
   核心推导
