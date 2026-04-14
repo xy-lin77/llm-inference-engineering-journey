@@ -50,6 +50,7 @@ uvicorn app_inference_advanced.main:app --host 0.0.0.0 --port 8002
 4. 访问服务
 - 示例服务文档：http://localhost:8000/docs
 - 推理服务文档：http://localhost:8001/docs
+    http://localhost:8001/docs
 
 ---
 
