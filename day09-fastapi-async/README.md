@@ -11,9 +11,11 @@ pip install fastapi uvicorn pydantic
 ```
 /day09-fastapi-async/
 ├── app_example/
-│   └── main.py
-└── app_inference/
-    └── main.py
+│   └── main.py # 学习FastAPI
+└── app_inference_basic/
+│   └── main.py # 学习FastAPI封装vLLM推理服务（最小可执行脚本）
+└── app_inference_advanced/
+    └── main.py # 生产级启动配置 + 异常处理 + 处理超长 prompt、参数非法等情况，返回结构化响应
 ```
 
 ### 1.3 启动前提
