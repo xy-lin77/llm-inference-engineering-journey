@@ -33,7 +33,6 @@ class InferenceRequest(BaseModel):
     temperature: float = Field(default=0.7, ge=0.0, le=1.0, description="随机性")
     top_p: float = Field(default=0.9, ge=0.0, le=1.0, description="采样阈值")
 
-    # ==================== 新增校验 ====================
     @field_validator('prompt')
     def check_prompt(cls, v):
         v = v.strip()
