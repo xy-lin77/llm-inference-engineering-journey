@@ -30,67 +30,49 @@ $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
 
 其中 $s_x$ 是 scale（标量），$x_q$ 是整数张量，误差来自 round。
 
+核心推导
+
+设线性变换为 $y = W \cdot x$，量化后：
+
+$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                         
+
+代入：                                                                                                             
+
+$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q)$$
+
+由于 $s_w, s_x$ 是标量，可以从矩阵乘法中提出：                                                                     
+
+$$= s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
+
+这就是「先做整数矩阵乘法，再乘回 scale」，即反量化。                                                               
+
+---
+为什么标量可以提出来？
+
+对矩阵乘法来说：$(c \cdot A)(d \cdot B) = cd \cdot
+(AB)$，这是标量乘法与矩阵乘法的相容性（bilinearity），本质上是分配律：
+
+$$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
+
+误差来自哪里？
+
+精确展开后：
+
+$$W = s_w \cdot W_q + \varepsilon_w, \quad x = s_x \cdot x_q + \varepsilon_x$$
+
+$$W \cdot x = s_w s_x (W_q x_q) + \underbrace{s_w W_q \varepsilon_x + \varepsilon_w s_x x_q + \varepsilon_w
+\varepsilon_x}_{\text{量化误差项}}$$
+
+量化精度越高（bit 越多），$\varepsilon$ 越小，近似越准。                                                           
+  
+双线性性 $(cA)(dB) = cd(AB)$
+
 ### 2. 权重量化
 
 | 模型环节 | 量化方式及细节 |
 |----------|----------------|
 | 词嵌入层 | 仅量化存储，使用时反量化回浮点；使用方式为查表（index lookup）而非GEMM，反量化仅需对取出的行乘以scale，代价极低，属于纯存储压缩 |
 | Q, K, V, O 投影层、<br>FFN 线性层 | 占模型参数的绝大部分，是量化的核心目标；常用量化<br>- per-tensor：整个矩阵共享一个scale，精度最差<br>- per-channel（per-row）：每行一个scale，精度较好，是主流<br>- group-wise/per-block：每g个元素（如g=128）共享一个scale，精度接近FP16，GPTQ/AWQ默认采用此方式 |
-
----
-
-
-
-  ---
-  核心推导
-
-  设线性变换为 $y = W \cdot x$，量化后：
-
-  $$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                         
-  
-  代入：                                                                                                             
-                                                            
-  $$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q)$$
-
-  由于 $s_w, s_x$ 是标量，可以从矩阵乘法中提出：                                                                     
-  
-  $$= s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
-                                                            
-  这就是「先做整数矩阵乘法，再乘回 scale」，即反量化。                                                               
-                                                            
-  ---
-  为什么标量可以提出来？
-
-  对矩阵乘法来说：$(c \cdot A)(d \cdot B) = cd \cdot
-  (AB)$，这是标量乘法与矩阵乘法的相容性（bilinearity），本质上是分配律：
-
-  $$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
-
-  ---
-  误差来自哪里？
-
-  精确展开后：
-
-  $$W = s_w \cdot W_q + \varepsilon_w, \quad x = s_x \cdot x_q + \varepsilon_x$$
-
-  $$W \cdot x = s_w s_x (W_q x_q) + \underbrace{s_w W_q \varepsilon_x + \varepsilon_w s_x x_q + \varepsilon_w
-  \varepsilon_x}_{\text{量化误差项}}$$
-
-  量化精度越高（bit 越多），$\varepsilon$ 越小，近似越准。                                                           
-  
-  ---                                                                                                                
-  总结                                                      
-
-  ┌──────────────────────────────┬──────────────┐
-  │           你的猜想           │   实际情况   │
-  ├──────────────────────────────┼──────────────┤
-  │ 结合律 $(AB)C = A(BC)$       │ 不是主要原因 │
-  ├──────────────────────────────┼──────────────┤
-  │ 双线性性 $(cA)(dB) = cd(AB)$ │ ✅ 核心原理  │
-  └──────────────────────────────┴──────────────┘                                                                    
-  
-  所以流程成立的原因是：scale 是标量，标量可以从矩阵乘法里提出来合并，round 的误差足够小时近似成立。
-
 
 ---
 
