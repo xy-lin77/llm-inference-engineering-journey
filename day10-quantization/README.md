@@ -24,28 +24,21 @@
 | 对称量化（常用于权重） | zero_point = 0，适用于权重等分布相对对称的场景 |
 | 非对称量化（常用于激活） | 需要 zero_point，适用于激活等分布不以0为中心的场景 |
 
+设线性变换为 $y = W \cdot x$，量化后：
+
+$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                                                                                                                                     
+$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
+先做整数矩阵乘法，再乘回 scale，即反量化。                                                               
+
+$$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
+
+误差来自哪里？
+
 以对称量化（zero_point = 0）为例：                        
 
 $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
 
 其中 $s_x$ 是 scale（标量），$x_q$ 是整数张量，误差来自 round。
-
-核心推导
-
-设线性变换为 $y = W \cdot x$，量化后：
-
-$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                                                                                                                                     
-$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
-
-先做整数矩阵乘法，再乘回 scale，即反量化。                                                               
-
-
-对矩阵乘法来说：$(c \cdot A)(d \cdot B) = cd \cdot
-(AB)$，这是标量乘法与矩阵乘法的相容性（bilinearity），本质上是分配律：
-
-$$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
-
-误差来自哪里？
 
 精确展开后：
 
