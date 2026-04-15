@@ -35,16 +35,10 @@ $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
 设线性变换为 $y = W \cdot x$，量化后：
 
 $$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                                                                                                                                     
-$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q)$$
+$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
 
-由于 $s_w, s_x$ 是标量，可以从矩阵乘法中提出：                                                                     
+先做整数矩阵乘法，再乘回 scale，即反量化。                                                               
 
-$$= s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
-
-这就是「先做整数矩阵乘法，再乘回 scale」，即反量化。                                                               
-
----
-为什么标量可以提出来？
 
 对矩阵乘法来说：$(c \cdot A)(d \cdot B) = cd \cdot
 (AB)$，这是标量乘法与矩阵乘法的相容性（bilinearity），本质上是分配律：
