@@ -26,8 +26,10 @@
 
 设线性变换为 $y = W \cdot x$，量化后：
 
-$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                                                                                                                                     
-$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$                                                                          
+$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$
+
+$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$
+
 先做整数矩阵乘法，再乘回 scale，即反量化。                                                               
 
 $$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
