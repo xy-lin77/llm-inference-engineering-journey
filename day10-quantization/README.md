@@ -51,6 +51,7 @@ $$
 
 ## 3. 量化误差来源
 ### 1. 舍入误差：浮点连续值→整数离散值的固有偏差
+量化精度越高（bit 越多），$\varepsilon$ 越小，近似越准。
 
 $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
 
@@ -58,8 +59,6 @@ $$W = s_w \cdot W_q + \varepsilon_w, \quad x = s_x \cdot x_q + \varepsilon_x$$
 
 $$W \cdot x = s_w s_x (W_q x_q) + \underbrace{s_w W_q \varepsilon_x + \varepsilon_w s_x x_q + \varepsilon_w
 \varepsilon_x}_{\text{量化误差项}}$$
-
-量化精度越高（bit 越多），$\varepsilon$ 越小，近似越准。
 
 ### 2. 截断/饱和误差：浮点极值超出整数范围，离群值是精度暴跌主因。
 ### 3. 累积误差：多层误差叠加，LLM更明显。
