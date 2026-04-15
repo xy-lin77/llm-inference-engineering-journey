@@ -30,9 +30,11 @@ $$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$
 
 先做整数矩阵乘法，再乘回 scale，即反量化：
 
-$$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)$$
-
-$$\sum_k (c \cdot A_{ik})(d \cdot B_{kj}) = cd \sum_k A_{ik} B_{kj}$$
+$$
+W \cdot x \approx 
+\underbrace{(s_w \cdot W_q) \cdot (s_x \cdot x_q)}_{\text{矩阵乘法标量交换律结合律}} = 
+\underbrace{s_w \cdot s_x \cdot (W_q \cdot x_q)}_{\text{矩阵乘法标量交换律结合律}}
+$$
 
 误差来自哪里？
 
