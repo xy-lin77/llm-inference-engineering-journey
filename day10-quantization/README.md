@@ -34,10 +34,7 @@ $$x_q = \text{round}\left(\frac{x}{s_x}\right), \quad x \approx s_x \cdot x_q$$
 
 设线性变换为 $y = W \cdot x$，量化后：
 
-$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                         
-
-代入：                                                                                                             
-
+$$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$                                                                                                                                                                     
 $$W \cdot x \approx (s_w \cdot W_q) \cdot (s_x \cdot x_q)$$
 
 由于 $s_w, s_x$ 是标量，可以从矩阵乘法中提出：                                                                     
