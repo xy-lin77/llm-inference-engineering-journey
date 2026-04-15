@@ -32,7 +32,7 @@ $$W \approx s_w \cdot W_q, \quad x \approx s_x \cdot x_q$$
 
 $$
 W \cdot x \approx 
-\underbrace{(s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)}_{\text{标量等价对角矩阵} \ sI,  \text{标量-矩阵交换律} + \text{矩阵乘法结合律}}
+\underbrace{(s_w \cdot W_q) \cdot (s_x \cdot x_q) = s_w \cdot s_x \cdot (W_q \cdot x_q)}_{\text{标量等价对角矩阵} \ sI,  \text{标量-矩阵交换律}, \text{矩阵乘法结合律}}
 $$
 
 误差来自哪里？
